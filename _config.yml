@@ -1,3 +1,6 @@
 # https://github.com/pages-themes/minimal#customizing
 theme: jekyll-theme-minimal
 show_downloads: false
+
+title: Today I Learned (TIL)
+description: A summary of new things I learn each day. Handy log of useful and interesting discoveries to remember and share.
