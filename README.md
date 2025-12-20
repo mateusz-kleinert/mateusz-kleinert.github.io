@@ -12,6 +12,7 @@
 
 ### Python
 
+- [Automate iTerm2 with Python API](python/automate-iterm2-with-python-api.md)
 - [Managing Python environments with `pyenv`](python/managing-python-environments-with-pyenv.md)
 
 ## License
