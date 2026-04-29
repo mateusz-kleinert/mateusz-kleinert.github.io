@@ -17,7 +17,7 @@
 
 ## License
 
-&copy; 2025 Mateusz Kleinert
+&copy; 2026 Mateusz Kleinert
 
 This repository is licensed under the MIT license. See `LICENSE` for
 details.
