@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cron Expression Parser</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --teal-dark:  #0d0d0d;
+      --teal:       #61d6d6;
+      --green:      #2d6a4f;
+      --yellow:     #ffd166;
+      --orange:     #f4a261;
+      --red-orange: #ff6b6b;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--teal-dark);
+      color: #f0f0f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    header h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: var(--yellow);
+      letter-spacing: 0.5px;
+    }
+
+    header p {
+      margin-top: 0.4rem;
+      color: #aaaaaa;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 820px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.35);
+    }
+
+    /* ── Mode selector ── */
+    .mode-toggle {
+      display: flex;
+      background: #111111;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 0.75rem;
+    }
+
+    .mode-toggle button {
+      flex: 1;
+      padding: 0.55rem 1rem;
+      border: none;
+      background: transparent;
+      color: #888888;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .mode-toggle button.active {
+      background: var(--orange);
+      color: #fff;
+    }
+
+    .mode-desc {
+      font-size: 0.8rem;
+      color: #888888;
+      text-align: center;
+      margin-bottom: 1.4rem;
+    }
+
+    /* ── Field grid ── */
+    .fields-grid {
+      display: grid;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .fields-grid.unix   { grid-template-columns: repeat(5, 1fr); }
+    .fields-grid.spring { grid-template-columns: repeat(6, 1fr); }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .field-group label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--orange);
+      text-align: center;
+    }
+
+    .field-group input {
+      background: #111111;
+      border: 2px solid #2a2a2a;
+      border-radius: 8px;
+      color: var(--yellow);
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-align: center;
+      padding: 0.5rem 0.25rem;
+      width: 100%;
+      transition: border-color 0.2s;
+      font-family: 'Courier New', monospace;
+    }
+
+    .field-group input:focus {
+      outline: none;
+      border-color: var(--teal);
+    }
+
+    .field-group input.error {
+      border-color: var(--red-orange);
+    }
+
+    .field-hint {
+      font-size: 0.65rem;
+      color: #666666;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    /* ── Raw input ── */
+    .row {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      align-items: center;
+    }
+
+    .row input {
+      flex: 1;
+      background: #111111;
+      border: 2px solid #2a2a2a;
+      border-radius: 10px;
+      color: var(--yellow);
+      font-family: 'Courier New', monospace;
+      font-size: 1.05rem;
+      font-weight: 600;
+      padding: 0.65rem 1rem;
+      transition: border-color 0.2s;
+    }
+
+    .row input:focus { outline: none; border-color: var(--teal); }
+    .row input.error { border-color: var(--red-orange); }
+
+    /* ── Quick examples ── */
+    .examples {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .examples span {
+      font-size: 0.72rem;
+      color: #666666;
+      align-self: center;
+      margin-right: 0.25rem;
+    }
+
+    .example-chip {
+      background: #111111;
+      border: 1px solid #2a2a2a;
+      border-radius: 20px;
+      color: #aaaaaa;
+      font-size: 0.75rem;
+      font-family: 'Courier New', monospace;
+      padding: 0.25rem 0.7rem;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s;
+    }
+
+    .example-chip:hover { border-color: var(--teal); color: var(--yellow); }
+
+    /* ── Result ── */
+    .result-box {
+      background: #111111;
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      min-height: 80px;
+      border-left: 4px solid #444444;
+    }
+
+    .result-box.has-error { border-left-color: var(--red-orange); }
+
+    .result-summary {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--yellow);
+      line-height: 1.5;
+      margin-bottom: 0.75rem;
+    }
+
+    .result-parts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .part-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #1a1a1a;
+      border-radius: 8px;
+      padding: 0.4rem 0.75rem;
+      min-width: 90px;
+    }
+
+    .part-badge .pb-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      color: var(--orange);
+      font-weight: 700;
+    }
+
+    .part-badge .pb-value {
+      font-size: 0.82rem;
+      color: #cccccc;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .error-msg {
+      color: var(--red-orange);
+      font-size: 0.9rem;
+    }
+
+    /* ── Next runs ── */
+    .next-runs {
+      margin-top: 1rem;
+    }
+
+    .next-runs h3 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--orange);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .next-runs ol {
+      list-style: none;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .next-runs ol li {
+      background: #1a1a1a;
+      border-radius: 6px;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      color: var(--yellow);
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ── Reference tables ── */
+    .ref-section {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 820px;
+    }
+
+    @media (max-width: 560px) {
+      .fields-grid.unix, .fields-grid.spring { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    .ref-card {
+      background: #1a1a1a;
+      border-radius: 10px;
+      padding: 1rem;
+    }
+
+    .ref-card h4 {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      color: var(--orange);
+      margin-bottom: 0.6rem;
+      letter-spacing: 0.6px;
+    }
+
+    .ref-card table { width: 100%; border-collapse: collapse; }
+    .ref-card td {
+      font-size: 0.78rem;
+      padding: 0.2rem 0.4rem;
+      color: #cccccc;
+      vertical-align: top;
+    }
+    .ref-card td:first-child,
+    .ref-card td:nth-child(3) {
+      font-family: 'Courier New', monospace;
+      color: var(--yellow);
+      white-space: nowrap;
+      padding-right: 0.75rem;
+    }
+    .ref-card td:nth-child(3) {
+      padding-left: 1.25rem;
+      border-left: 1px solid #2a2a2a;
+    }
+
+    footer {
+      margin-top: 2.5rem;
+      font-size: 0.72rem;
+      color: #555555;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Cron Expression Parser</h1>
+  <p>Parse and understand Unix &amp; Spring cron expressions</p>
+</header>
+
+<div class="card">
+  <!-- Mode toggle -->
+  <div class="mode-toggle">
+    <button id="btn-unix" class="active" onclick="setMode('unix')">Unix</button>
+    <button id="btn-spring" onclick="setMode('spring')">Spring</button>
+  </div>
+
+  <p id="mode-desc" class="mode-desc"></p>
+
+  <!-- Individual field inputs -->
+  <div class="fields-grid unix" id="fields-grid">
+    <!-- filled by JS -->
+  </div>
+
+  <!-- Expression row -->
+  <div class="row">
+    <input type="text" id="input" placeholder="* * * * *" spellcheck="false" />
+  </div>
+
+  <!-- Quick examples -->
+  <div class="examples" id="examples-row"></div>
+
+  <!-- Result -->
+  <div class="result-box" id="result-box">
+    <div class="result-summary" id="result-summary" style="color:#555555">
+      Enter a cron expression above to see its human-readable meaning.
+    </div>
+  </div>
+</div>
+
+<!-- Special characters reference -->
+<div class="ref-section">
+  <div class="ref-card">
+    <h4>Special characters</h4>
+    <table>
+      <tr><td>*</td><td>Every value</td>          <td>,</td><td>Value list (1,3,5)</td></tr>
+      <tr><td>-</td><td>Range (1-5)</td>           <td>/</td><td>Step (*/5, 0/15)</td></tr>
+      <tr><td>L</td><td>Last (dom / dow)</td>      <td>W</td><td>Nearest weekday (15W)</td></tr>
+      <tr><td>#</td><td>Nth weekday (2#3=3rd Mon)</td><td>?</td><td>No specific value (Spring only)</td></tr>
+    </table>
+  </div>
+</div>
+
+<footer>Runs entirely in your browser &mdash; no data is sent anywhere.</footer>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// Configuration
+// ─────────────────────────────────────────────────────────────────────────────
+const UNIX_FIELDS = [
+  { id: 'f-minute',  label: 'Minute',       hint: '0-59',      min: 0, max: 59 },
+  { id: 'f-hour',    label: 'Hour',          hint: '0-23',      min: 0, max: 23 },
+  { id: 'f-dom',     label: 'Day of Month',  hint: '1-31',      min: 1, max: 31 },
+  { id: 'f-month',   label: 'Month',         hint: '1-12 or JAN-DEC',  min: 1, max: 12 },
+  { id: 'f-dow',     label: 'Day of Week',   hint: '0-7, 0=Sun',       min: 0, max: 7  },
+];
+
+const SPRING_FIELDS = [
+  { id: 'f-second',  label: 'Second',        hint: '0-59',      min: 0, max: 59 },
+  { id: 'f-minute',  label: 'Minute',        hint: '0-59',      min: 0, max: 59 },
+  { id: 'f-hour',    label: 'Hour',          hint: '0-23',      min: 0, max: 23 },
+  { id: 'f-dom',     label: 'Day of Month',  hint: '1-31',      min: 1, max: 31 },
+  { id: 'f-month',   label: 'Month',         hint: '1-12 or JAN-DEC',  min: 1, max: 12 },
+  { id: 'f-dow',     label: 'Day of Week',   hint: '1-7 or MON-SUN',   min: 1, max: 7  },
+];
+
+const UNIX_EXAMPLES = [
+  { expr: '* * * * *',       label: 'Every minute' },
+  { expr: '0 * * * *',       label: 'Every hour' },
+  { expr: '0 0 * * *',       label: 'Daily midnight' },
+  { expr: '0 9 * * 1-5',     label: 'Weekdays 9am' },
+  { expr: '*/15 * * * *',    label: 'Every 15 min' },
+  { expr: '0 0 1 * *',       label: 'Monthly' },
+  { expr: '30 6 * * 1',      label: 'Mon 6:30am' },
+  { expr: '0 0 * * 0',       label: 'Every Sunday' },
+];
+
+const SPRING_EXAMPLES = [
+  { expr: '0 * * * * *',     label: 'Every minute' },
+  { expr: '0 0 * * * *',     label: 'Every hour' },
+  { expr: '0 0 0 * * *',     label: 'Daily midnight' },
+  { expr: '0 0 9 * * MON-FRI', label: 'Weekdays 9am' },
+  { expr: '0 */15 * * * *',  label: 'Every 15 min' },
+  { expr: '0 0 0 1 * *',     label: 'Monthly' },
+  { expr: '0 30 6 * * 2',    label: 'Mon 6:30am' },
+  { expr: '0 0 12 ? * 6L',   label: 'Last Sat noon' },
+];
+
+const MONTH_NAMES  = ['January','February','March','April','May','June',
+                      'July','August','September','October','November','December'];
+const DOW_UNIX     = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DOW_SPRING   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+let mode = 'unix'; // 'unix' | 'spring'
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI Bootstrap
+// ─────────────────────────────────────────────────────────────────────────────
+const MODE_DESC = {
+  unix:   'Standard 5-field format used by crontab — minute, hour, day of month, month, day of week.',
+  spring: 'Spring Framework 6-field format — adds a seconds field before minute, day of week uses 1–7.',
+};
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('btn-unix').classList.toggle('active', m === 'unix');
+  document.getElementById('btn-spring').classList.toggle('active', m === 'spring');
+  document.getElementById('mode-desc').textContent = MODE_DESC[m];
+  renderFields();
+  renderExamples();
+  syncFieldsToRaw();
+}
+
+function renderFields() {
+  const grid = document.getElementById('fields-grid');
+  const fields = mode === 'unix' ? UNIX_FIELDS : SPRING_FIELDS;
+  grid.className = `fields-grid ${mode}`;
+  grid.innerHTML = fields.map(f => `
+    <div class="field-group">
+      <label for="${f.id}">${f.label}</label>
+      <input type="text" id="${f.id}" value="*" spellcheck="false"
+             oninput="syncFieldsToRaw()" />
+      <div class="field-hint">${f.hint}</div>
+    </div>
+  `).join('');
+}
+
+function renderExamples() {
+  const examples = mode === 'unix' ? UNIX_EXAMPLES : SPRING_EXAMPLES;
+  const row = document.getElementById('examples-row');
+  row.innerHTML = '<span>Examples:</span>' +
+    examples.map(e => `<button class="example-chip" onclick="loadExample('${e.expr}')" title="${e.label}">${e.expr}</button>`).join('');
+}
+
+function loadExample(expr) {
+  document.getElementById('input').value = expr;
+  parse();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sync: individual fields → input → auto-parse
+// ─────────────────────────────────────────────────────────────────────────────
+function syncFieldsToRaw() {
+  const fields = mode === 'unix' ? UNIX_FIELDS : SPRING_FIELDS;
+  const parts = fields.map(f => {
+    const el = document.getElementById(f.id);
+    return el ? el.value.trim() || '*' : '*';
+  });
+  document.getElementById('input').value = parts.join(' ');
+  doParse(parts);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sync: input → individual fields
+// ─────────────────────────────────────────────────────────────────────────────
+function parse() {
+  const expr = document.getElementById('input').value.trim();
+  const parts = expr.split(/\s+/);
+  const fields = mode === 'unix' ? UNIX_FIELDS : SPRING_FIELDS;
+  const expectedLen = fields.length;
+
+  if (parts.length === expectedLen) {
+    fields.forEach((f, i) => {
+      const el = document.getElementById(f.id);
+      if (el) el.value = parts[i];
+    });
+  }
+  doParse(parts);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core parser
+// ─────────────────────────────────────────────────────────────────────────────
+function doParse(parts) {
+  const box = document.getElementById('result-box');
+  const summary = document.getElementById('result-summary');
+
+  const fields = mode === 'unix' ? UNIX_FIELDS : SPRING_FIELDS;
+  const expectedLen = fields.length;
+
+  if (parts.length !== expectedLen) {
+    box.className = 'result-box has-error';
+    summary.innerHTML = `<span class="error-msg">Expected ${expectedLen} fields for ${mode === 'unix' ? 'Unix' : 'Spring'} mode, got ${parts.length}.</span>`;
+    clearParts();
+    return;
+  }
+
+  try {
+    let result;
+    if (mode === 'unix') {
+      result = describeUnix(parts);
+    } else {
+      result = describeSpring(parts);
+    }
+
+    box.className = 'result-box';
+    summary.textContent = result.summary;
+
+    // Part badges
+    let badgesHtml = '<div class="result-parts">' +
+      fields.map((f, i) => `
+        <div class="part-badge">
+          <span class="pb-label">${f.label}</span>
+          <span class="pb-value">${describePart(parts[i], f, result.fieldDescs[i])}</span>
+        </div>
+      `).join('') +
+    '</div>';
+
+    // Next runs
+    const nextRuns = computeNextRuns(parts, 5);
+    let nextHtml = '';
+    if (nextRuns.length) {
+      nextHtml = `<div class="next-runs"><h3>Next ${nextRuns.length} occurrences</h3><ol>` +
+        nextRuns.map(d => `<li>${formatDate(d)}</li>`).join('') +
+        '</ol></div>';
+    }
+
+    summary.insertAdjacentHTML('afterend', '');
+    // Clear old dynamic content
+    const old = box.querySelectorAll('.result-parts, .next-runs');
+    old.forEach(el => el.remove());
+
+    box.insertAdjacentHTML('beforeend', badgesHtml + nextHtml);
+  } catch (e) {
+    box.className = 'result-box has-error';
+    summary.innerHTML = `<span class="error-msg">${e.message}</span>`;
+    clearParts();
+  }
+}
+
+function clearParts() {
+  const box = document.getElementById('result-box');
+  box.querySelectorAll('.result-parts, .next-runs').forEach(el => el.remove());
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part description (short label for badge)
+// ─────────────────────────────────────────────────────────────────────────────
+function describePart(val, field, override) {
+  if (override) return override;
+  if (val === '*' || val === '?') return 'every ' + field.label.toLowerCase();
+  return val;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unix describer
+// Fields: minute hour dom month dow
+// ─────────────────────────────────────────────────────────────────────────────
+function describeUnix([minute, hour, dom, month, dow]) {
+  const minuteDesc  = describeField(minute,  0, 59, 'minute',       null);
+  const hourDesc    = describeField(hour,    0, 23, 'hour',         null);
+  const domDesc     = describeField(dom,     1, 31, 'day of month', null);
+  const monthDesc   = describeField(month,   1, 12, 'month',        MONTH_NAMES);
+  const dowDesc     = describeField(dow,     0,  7, 'day of week',  DOW_UNIX);
+
+  const timeStr  = buildTimeStr(minute, hour, minuteDesc, hourDesc);
+  const dateStr  = buildDateStr(dom, month, dow, domDesc, monthDesc, dowDesc, false);
+
+  const summary = `${timeStr}${dateStr ? ', ' + dateStr : ''}`;
+
+  return {
+    summary,
+    fieldDescs: [minuteDesc, hourDesc, domDesc, monthDesc, dowDesc],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Spring describer
+// Fields: second minute hour dom month dow
+// ─────────────────────────────────────────────────────────────────────────────
+function describeSpring([second, minute, hour, dom, month, dow]) {
+  const secondDesc  = describeField(second,  0, 59, 'second',       null);
+  const minuteDesc  = describeField(minute,  0, 59, 'minute',       null);
+  const hourDesc    = describeField(hour,    0, 23, 'hour',         null);
+  const domDesc     = describeField(dom,     1, 31, 'day of month', null);
+  const monthDesc   = describeField(month,   1, 12, 'month',        MONTH_NAMES);
+  const dowDesc     = describeField(dow,     1,  7, 'day of week',  DOW_SPRING.slice(1));
+
+  const timeStr  = buildTimeStrSpring(second, minute, hour, secondDesc, minuteDesc, hourDesc);
+  const dateStr  = buildDateStr(dom, month, dow, domDesc, monthDesc, dowDesc, true);
+
+  const summary = `${timeStr}${dateStr ? ', ' + dateStr : ''}`;
+
+  return {
+    summary,
+    fieldDescs: [secondDesc, minuteDesc, hourDesc, domDesc, monthDesc, dowDesc],
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Field description engine
+// ─────────────────────────────────────────────────────────────────────────────
+function describeField(val, min, max, name, names) {
+  val = val.toUpperCase();
+
+  if (val === '*' || val === '?') return null; // "every"
+
+  // Step: */n or start/n
+  const stepMatch = val.match(/^(\*|(\d+))\/(\d+)$/);
+  if (stepMatch) {
+    const step = parseInt(stepMatch[3]);
+    const start = stepMatch[2] != null ? parseInt(stepMatch[2]) : min;
+    if (step === 1) return `every ${name} from ${label(start, names)}`;
+    return `every ${ordinal(step)} ${name}` + (start !== min ? ` starting at ${label(start, names)}` : '');
+  }
+
+  // Range: a-b
+  const rangeMatch = val.match(/^([A-Z0-9]+)-([A-Z0-9]+)$/);
+  if (rangeMatch) {
+    const a = resolveLabel(rangeMatch[1], names, min);
+    const b = resolveLabel(rangeMatch[2], names, min);
+    return `${label(a, names)} through ${label(b, names)}`;
+  }
+
+  // List: a,b,c
+  if (val.includes(',')) {
+    const parts = val.split(',').map(p => {
+      const n = resolveLabel(p.trim(), names, min);
+      return label(n, names);
+    });
+    return listJoin(parts);
+  }
+
+  // L (last)
+  if (val === 'L') return `last ${name}`;
+  if (/^\d+L$/.test(val)) return `last ${label(parseInt(val), names)}`;
+
+  // W (nearest weekday)
+  if (/^\d+W$/.test(val)) return `nearest weekday to the ${ordinal(parseInt(val))}`;
+
+  // # (nth weekday)
+  const hashMatch = val.match(/^(\d+)#(\d+)$/);
+  if (hashMatch) {
+    const d = parseInt(hashMatch[1]);
+    const n = parseInt(hashMatch[2]);
+    return `${ordinal(n)} ${label(d, names)} of the month`;
+  }
+
+  // Plain number or name
+  const n = resolveLabel(val, names, min);
+  if (!isNaN(n)) return `at ${name} ${label(n, names)}`;
+
+  throw new Error(`Unrecognised value "${val}" in ${name} field.`);
+}
+
+function resolveLabel(str, names, offset) {
+  if (/^\d+$/.test(str)) return parseInt(str);
+  if (!names) return NaN;
+  const abbrs = names.map(n => n.slice(0, 3).toUpperCase());
+  const idx = abbrs.indexOf(str.toUpperCase().slice(0, 3));
+  if (idx >= 0) return idx + offset;
+  return NaN;
+}
+
+function label(n, names) {
+  if (!names || isNaN(n)) return String(n);
+  const idx = typeof n === 'number' ? n - (names === MONTH_NAMES ? 1 : 0) : n;
+  return names[idx] || String(n);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Human sentence builders
+// ─────────────────────────────────────────────────────────────────────────────
+function buildTimeStr(minute, hour, minuteDesc, hourDesc) {
+  const everyMin  = minute === '*';
+  const everyHour = hour === '*';
+
+  // Specific time: "at HH:MM"
+  if (/^\d+$/.test(minute) && /^\d+$/.test(hour)) {
+    return `At ${pad(hour)}:${pad(minute)}`;
+  }
+
+  if (everyMin && everyHour) return 'Every minute';
+
+  const stepMinMatch = minute.match(/^\*\/(\d+)$/);
+  if (stepMinMatch && everyHour) {
+    const n = parseInt(stepMinMatch[1]);
+    return n === 1 ? 'Every minute' : `Every ${n} minutes`;
+  }
+
+  const stepHourMatch = hour.match(/^\*\/(\d+)$/);
+  if (stepHourMatch && everyMin) {
+    const n = parseInt(stepHourMatch[1]);
+    return n === 1 ? 'Every hour' : `Every ${n} hours`;
+  }
+
+  if (/^\d+$/.test(minute) && everyHour) return `At minute ${minute} of every hour`;
+  if (everyMin && /^\d+$/.test(hour)) return `Every minute during hour ${hour}`;
+
+  const mStr = minuteDesc ? minuteDesc : 'every minute';
+  const hStr = hourDesc   ? hourDesc   : 'every hour';
+  return `${cap(mStr)} of ${hStr}`;
+}
+
+function buildTimeStrSpring(second, minute, hour, secondDesc, minuteDesc, hourDesc) {
+  const everySec  = second === '*' || second === '?';
+  const everyMin  = minute === '*' || minute === '?';
+  const everyHour = hour   === '*' || hour   === '?';
+
+  if (/^\d+$/.test(second) && /^\d+$/.test(minute) && /^\d+$/.test(hour)) {
+    return `At ${pad(hour)}:${pad(minute)}:${pad(second)}`;
+  }
+
+  const stepSecMatch = second.match(/^\*\/(\d+)$/);
+  if (stepSecMatch && everyMin && everyHour) {
+    const n = parseInt(stepSecMatch[1]);
+    return n === 1 ? 'Every second' : `Every ${n} seconds`;
+  }
+
+  const stepMinMatch = minute.match(/^\*\/(\d+)$/);
+  if (stepMinMatch && everySec && everyHour) {
+    const n = parseInt(stepMinMatch[1]);
+    return n === 1 ? 'Every minute' : `Every ${n} minutes`;
+  }
+
+  if (everySec && everyMin && everyHour) return 'Every second';
+
+  const sStr = secondDesc ? secondDesc : 'every second';
+  const mStr = minuteDesc ? minuteDesc : 'every minute';
+  const hStr = hourDesc   ? hourDesc   : 'every hour';
+  return `${cap(sStr)} of ${mStr} of ${hStr}`;
+}
+
+function buildDateStr(dom, month, dow, domDesc, monthDesc, dowDesc, isSpring) {
+  const everyDom   = dom   === '*' || dom   === '?';
+  const everyMonth = month === '*' || month === '?';
+  const everyDow   = dow   === '*' || dow   === '?';
+
+  if (everyDom && everyMonth && everyDow) return null;
+
+  const parts = [];
+
+  if (!everyDow && !everyDom) {
+    parts.push(`on ${dowDesc} that falls on the ${domDesc}`);
+  } else if (!everyDow) {
+    parts.push(`on ${dowDesc}`);
+  } else if (!everyDom) {
+    parts.push(`on the ${domDesc}`);
+  }
+
+  if (!everyMonth) {
+    parts.push(`in ${monthDesc}`);
+  }
+
+  return parts.join(' ');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Next-run calculator (pure JS, browser date arithmetic)
+// ─────────────────────────────────────────────────────────────────────────────
+function computeNextRuns(parts, count) {
+  try {
+    const isSpring = mode === 'spring';
+    let [second, minute, hour, dom, month, dow] = isSpring
+      ? [parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]]
+      : ['0', parts[0], parts[1], parts[2], parts[3], parts[4]];
+
+    const now = new Date();
+    now.setMilliseconds(0);
+    now.setSeconds(now.getSeconds() + 1); // start 1s from now
+
+    const results = [];
+    let cursor = new Date(now);
+    let attempts = 0;
+    const maxAttempts = 100000;
+
+    while (results.length < count && attempts < maxAttempts) {
+      attempts++;
+      if (matchesCron(cursor, second, minute, hour, dom, month, dow, isSpring)) {
+        results.push(new Date(cursor));
+        cursor.setSeconds(cursor.getSeconds() + 1);
+      } else {
+        cursor.setSeconds(cursor.getSeconds() + 1);
+      }
+    }
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+function matchesCron(d, second, minute, hour, dom, month, dow, isSpring) {
+  const s  = d.getSeconds();
+  const mi = d.getMinutes();
+  const h  = d.getHours();
+  const D  = d.getDate();
+  const M  = d.getMonth() + 1; // 1-based
+  const W  = d.getDay();       // 0=Sun
+
+  if (!matchField(s,  second, 0, 59, null, false))       return false;
+  if (!matchField(mi, minute, 0, 59, null, false))        return false;
+  if (!matchField(h,  hour,   0, 23, null, false))        return false;
+  if (!matchField(M,  month,  1, 12, null, false))        return false;
+
+  const dowVal = isSpring ? W + 1 : W; // Spring: 1=Mon? actually 1=Sun in most impls; let's use 1=Sun
+  if (!matchField(dowVal, dow, isSpring ? 1 : 0, isSpring ? 7 : 7, null, true)) return false;
+  if (!matchField(D, dom, 1, 31, null, true)) return false;
+
+  return true;
+}
+
+function matchField(val, expr, min, max, names, isDomOrDow) {
+  expr = String(expr).toUpperCase();
+  if (expr === '*' || expr === '?') return true;
+
+  // Step
+  const stepMatch = expr.match(/^(\*|(\d+))\/(\d+)$/);
+  if (stepMatch) {
+    const start = stepMatch[2] != null ? parseInt(stepMatch[2]) : min;
+    const step  = parseInt(stepMatch[3]);
+    for (let v = start; v <= max; v += step) if (v === val) return true;
+    return false;
+  }
+
+  // Range
+  const rangeMatch = expr.match(/^([A-Z0-9]+)-([A-Z0-9]+)$/);
+  if (rangeMatch) {
+    const a = resolveLabel(rangeMatch[1], names, min);
+    const b = resolveLabel(rangeMatch[2], names, min);
+    return val >= a && val <= b;
+  }
+
+  // List
+  if (expr.includes(',')) {
+    return expr.split(',').some(p => matchField(val, p.trim(), min, max, names, isDomOrDow));
+  }
+
+  // L
+  if (expr === 'L') return true; // simplified
+
+  // Plain
+  const n = resolveLabel(expr, names, min);
+  return val === n;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Formatting helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function pad(n) { return String(n).padStart(2, '0'); }
+function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+function ordinal(n) {
+  const s = ['th','st','nd','rd'];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+function listJoin(arr) {
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return arr.join(' and ');
+  return arr.slice(0, -1).join(', ') + ', and ' + arr[arr.length - 1];
+}
+
+function formatDate(d) {
+  const days   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()} ` +
+         `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
+renderFields();
+renderExamples();
+document.getElementById('mode-desc').textContent = MODE_DESC[mode];
+document.getElementById('input').addEventListener('input', parse);
+syncFieldsToRaw();
+</script>
+</body>
+</html>
