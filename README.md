@@ -22,6 +22,10 @@ A collection of simple tools for everyday developer work.
 - <a href="https://mateusz-kleinert.github.io/tools/cron-expression-parser/" target="_blank">Cron Expression Parser</a> — A web-based tool for parsing and understanding cron expressions at a glance.
 - <a href="https://github.com/mateusz-kleinert/oidc-inspector" target="_blank">OIDC Inspector</a> — A utility for inspecting and debugging OpenID Connect tokens and flows.
 
+A collection of articles about useful tools in an everyday work.
+
+- [Faster and Better Management of S3 Buckets with s5cmd](tools/faster-and-better-management-of-s3-buckets-with-s5cmd.md)
+
 ## License
 
 &copy; 2026 Mateusz Kleinert
