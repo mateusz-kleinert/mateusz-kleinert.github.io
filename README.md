@@ -25,6 +25,7 @@ A collection of simple tools for everyday developer work.
 A collection of articles about useful tools in an everyday work.
 
 - [Faster and Better Management of S3 Buckets with s5cmd](tools/faster-and-better-management-of-s3-buckets-with-s5cmd.md)
+- [Configuring Podman as a Docker Alternative on macOS](tools/configuring-podman-as-a-docker-alternative-on-macos.md)
 
 ## License
 
