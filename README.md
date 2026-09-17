@@ -7,6 +7,7 @@
 
 ### Kubernetes
 
+- [Debugging etcd from a snapshot](kubernetes/debugging-etcd-from-a-snapshot.md)
 - [Real-time log streaming and analysis in Kubernetes](kubernetes/real-time-log-streaming-and-analysis-in-kubernetes.md)
 - [Use existing Kubernetes Secret in a Helm template](kubernetes/use-existing-kubernetes-secret-in-a-helm-template.md)
 
