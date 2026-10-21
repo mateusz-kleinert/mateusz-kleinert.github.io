@@ -11,6 +11,7 @@ A collection of things I learned and found worth writing down. The articles are 
 ### AI
 
 - [Benchmarking vLLM Deployments with GuideLLM: A Complete Guide to Inference Performance](ai/benchmarking-vllm-deployments-with-guidellm-a-complete-guide-to-inference-performance.md)
+- [Running vLLM with CPU Backend](ai/running-vllm-with-cpu-backend.md)
 
 ### Kubernetes
 
