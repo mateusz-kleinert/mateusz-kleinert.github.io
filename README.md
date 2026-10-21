@@ -2,8 +2,13 @@
 
 ### Categories
 
+* [AI](#ai)
 * [Kubernetes](#kubernetes)
 * [Python](#python)
+
+### AI
+
+- [Benchmarking vLLM Deployments with GuideLLM: A Complete Guide to Inference Performance](ai/benchmarking-vllm-deployments-with-guidellm-a-complete-guide-to-inference-performance.md)
 
 ### Kubernetes
 
