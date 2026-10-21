@@ -39,5 +39,5 @@ A collection of articles about useful tools in an everyday work.
 
 &copy; 2026 Mateusz Kleinert
 
-This repository is licensed under the MIT license. See `LICENSE` for
+This repository is licensed under the MIT license. See [LICENSE](LICENSE) for
 details.
