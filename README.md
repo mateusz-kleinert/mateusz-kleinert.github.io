@@ -1,5 +1,7 @@
 # TIL
 
+A collection of things I learned and found worth writing down. The articles are drafted with the help of AI and then reviewed, tested and edited by me before publishing.
+
 ### Categories
 
 * [AI](#ai)
