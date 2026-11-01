@@ -11,6 +11,7 @@ The WAL stays small because of a regular cleanup cycle:
 1. Every ~2h the head is compacted into a persistent block (`01H...` directory).
 2. Prometheus writes a **checkpoint** (`wal/checkpoint.NNNNNNNN`) summarising the older segments that are still needed.
 3. The segments covered by the checkpoint are deleted.
+
 ## How corruption breaks it
 
 To create a checkpoint, Prometheus has to **read** the old segments. If one of them is corrupted, for example by a torn write after a disk-full event or an OOM kill, checkpoint creation fails. Without a checkpoint, the old segments can't be truncated.
@@ -154,6 +155,7 @@ Typical root causes are a full disk, an OOM kill during a write, too short a `te
 - Alert on PVC usage (`kubelet_volume_stats_available_bytes`) and on the checkpoint and truncation failure metrics above.
 - Give Prometheus enough memory and keep cardinality in check. An OOM kill during a write is a classic way to corrupt a segment.
 - Use block storage with `ReadWriteOnce`, not NFS.
+
 ## Summary
 
 | Option | Data loss | When to use |
